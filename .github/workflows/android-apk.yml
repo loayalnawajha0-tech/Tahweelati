@@ -3,10 +3,18 @@ name: Build Tahweelati APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,27 +28,47 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK
+      - name: Accept Android SDK licenses
+        shell: bash
         run: |
+          set +o pipefail
           yes | sdkmanager --licenses
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          set -o pipefail
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-35"
+          sdkmanager "build-tools;35.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Extract project
-        run: unzip -q Tahweelati_CloudBuild.zip -d project
+      - name: Verify project archive
+        run: |
+          test -f Tahweelati_CloudBuild.zip
+          unzip -t Tahweelati_CloudBuild.zip
+          unzip -q Tahweelati_CloudBuild.zip -d project
 
-      - name: Build APK
+      - name: Verify Android project
         working-directory: project/Tahweelati
-        run: gradle assembleDebug
+        run: |
+          test -f settings.gradle.kts
+          test -f build.gradle.kts
+          test -f app/build.gradle.kts
+          test -f app/src/main/AndroidManifest.xml
+
+      - name: Build Tahweelati APK
+        working-directory: project/Tahweelati
+        run: |
+          gradle --no-daemon --stacktrace assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Tahweelati-debug-apk
+          name: Tahweelati-APK
           path: project/Tahweelati/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          
+          retention-days: 14
