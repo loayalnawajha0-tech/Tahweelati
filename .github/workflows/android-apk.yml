@@ -41,9 +41,19 @@ jobs:
 
       - name: Extract project
         run: |
-          test -f Tahweelati_CloudBuild.zip
-          unzip -t Tahweelati_CloudBuild.zip
-          unzip -q Tahweelati_CloudBuild.zip -d project
+          mkdir -p project
+
+          ZIP_FILE=$(find . -type f -iname 'Tahweelati_CloudBuild*.zip' -print -quit)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: Project ZIP file not found"
+            find . -maxdepth 4 -type f
+            exit 1
+          fi
+
+          echo "Found project: $ZIP_FILE"
+          unzip -t "$ZIP_FILE"
+          unzip -q "$ZIP_FILE" -d project
 
       - name: Verify project
         working-directory: project/Tahweelati
