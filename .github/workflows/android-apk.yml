@@ -53,20 +53,15 @@ jobs:
           test -f app/build.gradle.kts
           test -f app/src/main/AndroidManifest.xml
 
-      - name: Configure JVM 17 compatibility
+      - name: Fix Java JVM target
         working-directory: project/Tahweelati
         run: |
-          cat > /tmp/jvm17.gradle <<'EOF'
-          allprojects {
-              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
-                  sourceCompatibility = '17'
-                  targetCompatibility = '17'
-              }
+          cat >> app/build.gradle.kts <<'EOF'
 
-              tasks.configureEach { task ->
-                  if (task.class.name.contains('KotlinCompile')) {
-                      task.kotlinOptions.jvmTarget = '17'
-                  }
+          android {
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
               }
           }
           EOF
@@ -74,8 +69,7 @@ jobs:
       - name: Build APK
         working-directory: project/Tahweelati
         run: |
-          gradle --no-daemon --stacktrace \
-          --init-script /tmp/jvm17.gradle assembleDebug
+          gradle --no-daemon --stacktrace assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
