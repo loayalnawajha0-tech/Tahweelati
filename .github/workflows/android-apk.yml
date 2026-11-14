@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Android APK
+    name: Build Tahweelati APK
     runs-on: ubuntu-latest
 
     steps:
@@ -31,28 +31,43 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Install Android SDK Packages
+      - name: Install SDK Packages
         run: |
           sdkmanager --install \
             "platforms;android-35" \
             "build-tools;35.0.0"
 
-      - name: Setup Gradle 8.9
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Locate Project
+      - name: Extract Tahweelati ZIP
         run: |
-          if [ -f "build.gradle.kts" ] && [ -d "app" ]; then
-            echo "PROJECT_DIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-          elif [ -f "Tahweelati/build.gradle.kts" ]; then
-            echo "PROJECT_DIR=$GITHUB_WORKSPACE/Tahweelati" >> $GITHUB_ENV
-          else
-            echo "Project directory not found!"
-            find . -maxdepth 3 -name build.gradle.kts
+          ZIP_FILE=$(find . -type f \
+            -name "Tahweelati_v1.3_OriginalIcon.zip" \
+            -print -quit)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ZIP FILE NOT FOUND!"
+            find . -maxdepth 4 -type f
             exit 1
           fi
+
+          mkdir -p extracted
+          unzip -o "$ZIP_FILE" -d extracted
+
+          PROJECT_DIR=$(find "$GITHUB_WORKSPACE/extracted" \
+            -type f -name "settings.gradle.kts" \
+            -print -quit | xargs dirname)
+
+          if [ -z "$PROJECT_DIR" ] || [ ! -d "$PROJECT_DIR/app" ]; then
+            echo "Android project not found inside ZIP!"
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project found: $PROJECT_DIR"
 
       - name: Build APK
         run: |
@@ -62,21 +77,15 @@ jobs:
 
       - name: Prepare APK
         run: |
-          APK=$(find "$PROJECT_DIR/app/build/outputs/apk/debug" \
-            -name "*.apk" -type f | head -n 1)
-
-          if [ -z "$APK" ]; then
-            echo "APK file not found!"
-            exit 1
-          fi
-
-          cp "$APK" "$GITHUB_WORKSPACE/Tahweelati.apk"
+          mkdir -p output
+          cp "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" \
+             output/Tahweelati.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Tahweelati-APK
-          path: Tahweelati.apk
+          name: Tahweelati-APK-v1.3
+          path: output/Tahweelati.apk
           if-no-files-found: error
           retention-days: 14
           
