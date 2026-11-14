@@ -33,20 +33,50 @@ jobs:
 
       - name: Install Android SDK Packages
         run: |
-          sdkmanager "platforms;android-35"
-          sdkmanager "build-tools;35.0.0"
+          sdkmanager --install \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
-      - name: Grant Gradle Permission
-        run: chmod +x gradlew
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Locate Project
+        run: |
+          if [ -f "build.gradle.kts" ] && [ -d "app" ]; then
+            echo "PROJECT_DIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          elif [ -f "Tahweelati/build.gradle.kts" ]; then
+            echo "PROJECT_DIR=$GITHUB_WORKSPACE/Tahweelati" >> $GITHUB_ENV
+          else
+            echo "Project directory not found!"
+            find . -maxdepth 3 -name build.gradle.kts
+            exit 1
+          fi
 
       - name: Build APK
-        run: ./gradlew --no-daemon clean assembleDebug
+        run: |
+          gradle --no-daemon \
+            -p "$PROJECT_DIR" \
+            clean assembleDebug
+
+      - name: Prepare APK
+        run: |
+          APK=$(find "$PROJECT_DIR/app/build/outputs/apk/debug" \
+            -name "*.apk" -type f | head -n 1)
+
+          if [ -z "$APK" ]; then
+            echo "APK file not found!"
+            exit 1
+          fi
+
+          cp "$APK" "$GITHUB_WORKSPACE/Tahweelati.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Tahweelati-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: Tahweelati.apk
           if-no-files-found: error
           retention-days: 14
           
