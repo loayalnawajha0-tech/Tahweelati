@@ -14,42 +14,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract Flutter project
+      - name: Extract project
         run: |
           unzip -q Tahweelati_Flutter_V2.0.0.zip -d extracted
           test -f extracted/Tahweelati_Flutter_V2/pubspec.yaml
+          test -f extracted/Tahweelati_Flutter_V2/lib/main.dart
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.50.0'
           channel: stable
+          flutter-version: '3.50.0'
           cache: true
 
-      - name: Prepare Android project
+      - name: Create Android platform
         working-directory: extracted/Tahweelati_Flutter_V2
-        run: |
-          flutter create --platforms=android --org com.loay --project-name tahweelati .
-          sed -i 's/android:label="tahweelati"/android:label="تحويلاتي"/' android/app/src/main/AndroidManifest.xml
+        run: flutter create --platforms=android --org com.loay --project-name tahweelati .
 
-      - name: Install dependencies
+      - name: Install packages
         working-directory: extracted/Tahweelati_Flutter_V2
         run: flutter pub get
 
-      - name: Generate app icon
+      - name: Generate launcher icon
         working-directory: extracted/Tahweelati_Flutter_V2
         run: dart run flutter_launcher_icons
 
-      - name: Build APK
+      - name: Build Release APK
         working-directory: extracted/Tahweelati_Flutter_V2
         run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Tahweelati-v2.0.1-release
+          name: Tahweelati-v2.0.0-release
           path: extracted/Tahweelati_Flutter_V2/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
