@@ -4,43 +4,63 @@ name: Build Tahweelati APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
+    branches:
+      - main
+      - master
 
 permissions:
   contents: read
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract project
+      - name: Verify project ZIP
+        run: |
+          test -f Tahweelati_Flutter_V2.0.0.zip
+          unzip -t Tahweelati_Flutter_V2.0.0.zip
+
+      - name: Extract Flutter project
         run: |
           unzip -q Tahweelati_Flutter_V2.0.0.zip -d extracted
           test -f extracted/Tahweelati_Flutter_V2/pubspec.yaml
           test -f extracted/Tahweelati_Flutter_V2/lib/main.dart
 
-      - name: Setup Flutter
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: '3.50.0'
           cache: true
 
-      - name: Create Android platform
+      - name: Prepare Android project
         working-directory: extracted/Tahweelati_Flutter_V2
-        run: flutter create --platforms=android --org com.loay --project-name tahweelati .
+        run: |
+          flutter create --platforms=android --org com.loay --project-name tahweelati .
+          sed -i 's/android:label="tahweelati"/android:label="تحويلاتي"/' android/app/src/main/AndroidManifest.xml
 
-      - name: Install packages
+      - name: Install dependencies
         working-directory: extracted/Tahweelati_Flutter_V2
         run: flutter pub get
 
-      - name: Generate launcher icon
+      - name: Generate app icon
         working-directory: extracted/Tahweelati_Flutter_V2
         run: dart run flutter_launcher_icons
+
+      - name: Analyze Flutter code
+        working-directory: extracted/Tahweelati_Flutter_V2
+        run: flutter analyze --no-pub
 
       - name: Build Release APK
         working-directory: extracted/Tahweelati_Flutter_V2
@@ -52,3 +72,4 @@ jobs:
           name: Tahweelati-v2.0.0-release
           path: extracted/Tahweelati_Flutter_V2/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+          
