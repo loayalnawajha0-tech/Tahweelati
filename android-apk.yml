@@ -11,21 +11,22 @@ permissions:
 
 jobs:
   build:
-    name: Build Android Release APK
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify and extract Flutter project
+      - name: Verify and extract project
         run: |
+          ls -la
           test -f Tahweelati_USSD_Flutter_Project.zip
           unzip -t Tahweelati_USSD_Flutter_Project.zip
           unzip -q Tahweelati_USSD_Flutter_Project.zip -d extracted
           test -f extracted/Tahweelati_Flutter_V2/pubspec.yaml
           test -f extracted/Tahweelati_Flutter_V2/lib/main.dart
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -36,34 +37,24 @@ jobs:
         with:
           channel: stable
           flutter-version: '3.50.0'
-          cache: true
 
-      - name: Generate Android platform
+      - name: Prepare Android
         working-directory: extracted/Tahweelati_Flutter_V2
         run: flutter create --platforms=android --org com.loay --project-name tahweelati .
 
-      - name: Set app display name
-        working-directory: extracted/Tahweelati_Flutter_V2
-        run: |
-          sed -i 's/android:label="tahweelati"/android:label="تحويلاتي USSD"/' android/app/src/main/AndroidManifest.xml
-
-      - name: Configure Android Lint
-        working-directory: extracted/Tahweelati_Flutter_V2
-        run: python3 scripts/patch_android_gradle.py
-
-      - name: Install Flutter dependencies
+      - name: Install dependencies
         working-directory: extracted/Tahweelati_Flutter_V2
         run: flutter pub get
 
-      - name: Generate launcher icon
+      - name: Generate app icon
         working-directory: extracted/Tahweelati_Flutter_V2
         run: dart run flutter_launcher_icons
 
-      - name: Build release APK
+      - name: Build APK
         working-directory: extracted/Tahweelati_Flutter_V2
         run: flutter build apk --release
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Tahweelati-USSD-v2.0.0
